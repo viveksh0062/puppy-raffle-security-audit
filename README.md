@@ -1,94 +1,101 @@
-<p align="center">
-<img src="./images/puppy-raffle.svg" width="400" alt="puppy-raffle">
-<br/>
+# 🐶 Puppy Raffle – Smart Contract Security Audit
 
-# Puppy Raffle
+This repository documents my **first independent smart contract security audit**, conducted on the **PuppyRaffle** protocol.
 
-This project is to enter a raffle to win a cute dog NFT. The protocol should do the following:
+The goal of this audit was to identify **security vulnerabilities, logic flaws, and denial-of-service risks** that could impact user funds, fairness of the raffle, or protocol availability.
 
-1. Call the `enterRaffle` function with the following parameters:
-   1. `address[] participants`: A list of addresses that enter. You can use this to enter yourself multiple times, or yourself and a group of your friends.
-2. Duplicate addresses are not allowed
-3. Users are allowed to get a refund of their ticket & `value` if they call the `refund` function
-4. Every X seconds, the raffle will be able to draw a winner and be minted a random puppy
-5. The owner of the protocol will set a feeAddress to take a cut of the `value`, and the rest of the funds will be sent to the winner of the puppy.
+---
 
-- [Puppy Raffle](#puppy-raffle)
-- [Getting Started](#getting-started)
-  - [Requirements](#requirements)
-  - [Quickstart](#quickstart)
-    - [Optional Gitpod](#optional-gitpod)
-- [Usage](#usage)
-  - [Testing](#testing)
-    - [Test Coverage](#test-coverage)
-- [Audit Scope Details](#audit-scope-details)
-  - [Compatibilities](#compatibilities)
-- [Roles](#roles)
-- [Known Issues](#known-issues)
+## 📌 Audit Overview
 
-# Getting Started
+- **Target Contract:** PuppyRaffle
+- **Audit Type:** Manual review + Foundry-based testing
+- **Focus Areas:**
+  - Denial of Service (DoS)
+  - Reentrancy
+  - Weak Randomness
+  - Accounting & Overflow
+  - General Solidity best practices
 
-## Requirements
+This audit was performed **without access to privileged information** and assumes a **hostile on-chain environment**.
 
-- [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-  - You'll know you did it right if you can run `git --version` and you see a response like `git version x.x.x`
-- [foundry](https://getfoundry.sh/)
-  - You'll know you did it right if you can run `forge --version` and you see a response like `forge 0.2.0 (816e00b 2023-03-16T00:05:26.396218Z)`
+---
 
-## Quickstart
+## 🧾 Findings Summary
 
-```
-git clone https://github.com/Cyfrin/4-puppy-raffle-audit
-cd 4-puppy-raffle-audit
-make
-```
+| Severity  | Count          |
+| --------- | -------------- |
+| 🔴 High    | 3              |
+| 🟡 Medium  | 1              |
+| 🟢 Low     | 1              |
+| **Total** | **5 Findings** |
 
-### Optional Gitpod
+---
 
-If you can't or don't want to run and install locally, you can work with this repo in Gitpod. If you do this, you can skip the `clone this repo` part.
+## 🚨 High Severity Findings (3)
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#github.com/Cyfrin/4-puppy-raffle-audit)
+- **Denial of Service via unbounded nested loops**  
+  A quadratic duplicate-check loop causes gas costs to scale with the square of the number of players, eventually making `enterRaffle` unusable.
 
-# Usage
+- **Accounting overflow in `totalFees` leading to permanent DoS**  
+  `totalFees` was stored as a `uint64`, causing arithmetic overflow after sufficient raffles and permanently reverting `selectWinner`.
 
-## Testing
+- **Reentrancy risk due to external ETH transfer before full state finalization**  
+  Prize distribution uses low-level calls that can be abused by malicious contracts to re-enter execution paths.
 
-```
-forge test
-```
+---
 
-### Test Coverage
+## ⚠️ Medium Severity Finding (1)
 
-```
-forge coverage
-```
+- **Weak on-chain randomness for winner and rarity selection**  
+  The protocol relies on predictable on-chain values (`block.timestamp`, `block.difficulty / prevrandao`, `msg.sender`) to generate randomness, allowing attackers to influence outcomes.
 
-and for coverage based testing:
+---
 
-```
-forge coverage --report debug
-```
+## ℹ️ Low Severity Finding (1)
 
-# Audit Scope Details
+- **Gas inefficiencies and minor logic inconsistencies**  
+  Includes suboptimal patterns that do not directly compromise security but increase costs or reduce clarity.
 
-- Commit Hash: 2a47715b30cf11ca82db148704e67652ad679cd8
-- In Scope:
+---
 
-```
-./src/
-└── PuppyRaffle.sol
-```
+## 🧪 Testing & Proof of Concepts
 
-## Compatibilities
+All high-impact issues were validated using **Foundry tests**, including:
+- Gas comparison tests demonstrating DoS conditions
+- Overflow reproduction tests
+- Adversarial execution paths
 
-- Solc Version: 0.7.6
-- Chain(s) to deploy contract to: Ethereum
+PoCs are included inside the `test/` directory and individual finding files.
 
-# Roles
+---
 
-Owner - Deployer of the protocol, has the power to change the wallet address to which fees are sent through the `changeFeeAddress` function.
-Player - Participant of the raffle, has the power to enter the raffle with the `enterRaffle` function and refund value through `refund` function.
+## 🧠 Key Takeaways
 
-# Known Issues
+- Even seemingly harmless design decisions (like duplicate checks or storage packing) can introduce **critical vulnerabilities**.
+- Gas-based DoS and accounting overflows are **easy to miss but highly destructive**.
+- Proper audit mindset requires assuming **malicious users, contracts, and block producers**.
 
-None
+This audit was a major learning milestone and helped solidify my understanding of **real-world smart contract attack surfaces**.
+
+---
+
+## 👤 About Me
+
+This was my **first complete smart contract audit**, conducted as part of my journey into **Web3 security research**.
+
+- 🐦 X (Twitter): https://x.com/viveksh0062 
+- 🧵 LinkedIn : https://www.linkedin.com/in/vivek-sharma-679606360/  
+
+I am actively learning, practicing audits, and writing PoCs using **Foundry**.
+
+---
+
+## ⚠️ Disclaimer
+
+This audit does not guarantee the absence of vulnerabilities.  
+The findings represent a **best-effort security review** based on the time and scope available.
+
+---
+
+⭐ If you find this audit useful, feel free to explore the findings or reach out for feedback.
